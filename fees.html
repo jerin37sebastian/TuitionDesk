@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TuitionDesk — Fees</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/style.css"/>
+  <style>
+    .fee-summary { display: flex; gap: 10px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 4px; }
+    .fee-summary::-webkit-scrollbar { display: none; }
+    .fee-sum-card { background: var(--white); border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; flex-shrink: 0; min-width: 110px; }
+    .fee-sum-card .label { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+    .fee-sum-card .val { font-size: 20px; font-weight: 700; }
+    .toast { position: fixed; bottom: calc(var(--nav-h) + 16px); left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 500; opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; }
+    .toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="topbar-title">Fee Tracking</div>
+  </div>
+
+  <!-- PAGE -->
+  <div class="page">
+
+    <!-- Summary cards -->
+    <div class="fee-summary">
+      <div class="fee-sum-card">
+        <div class="label">Total</div>
+        <div class="val" id="totalAmt">₹0</div>
+      </div>
+      <div class="fee-sum-card">
+        <div class="label" style="color:var(--green)">Collected</div>
+        <div class="val" style="color:var(--green)" id="paidAmt">₹0</div>
+      </div>
+      <div class="fee-sum-card">
+        <div class="label" style="color:var(--red)">Pending</div>
+        <div class="val" style="color:var(--red)" id="pendAmt">₹0</div>
+      </div>
+    </div>
+
+    <!-- Filter tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="filter('all',this)">All</button>
+      <button class="tab" onclick="filter('paid',this)">Paid</button>
+      <button class="tab" onclick="filter('pending',this)">Pending</button>
+      <button class="tab" onclick="filter('partial',this)">Partial</button>
+    </div>
+
+    <div id="feeList"></div>
+
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav">
+    <a href="dashboard.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Home
+    </a>
+    <a href="students.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/></svg>
+      Students
+    </a>
+    <a href="attendance.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      Attendance
+    </a>
+    <a href="fees.html" class="nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      Fees
+    </a>
+  </nav>
+
+  <script src="js/data.js"></script>
+  <script>
+    let feeData = TD.fees.map(f => ({...f, originalStatus: f.status}));
+
+    // Summary
+    const total   = feeData.reduce((s,f) => s + f.amount, 0);
+    const paid    = feeData.filter(f => f.status === 'paid').reduce((s,f) => s + f.amount, 0);
+    const pending = feeData.filter(f => f.status !== 'paid').reduce((s,f) => s + f.amount, 0);
+    document.getElementById('totalAmt').textContent = `₹${total.toLocaleString('en-IN')}`;
+    document.getElementById('paidAmt').textContent  = `₹${paid.toLocaleString('en-IN')}`;
+    document.getElementById('pendAmt').textContent  = `₹${pending.toLocaleString('en-IN')}`;
+
+    function badgeFor(status) {
+      if (status === 'paid')    return '<span class="badge badge-green">✅ Paid</span>';
+      if (status === 'pending') return '<span class="badge badge-red">⚠️ Pending</span>';
+      return '<span class="badge badge-yellow">🔸 Partial</span>';
+    }
+
+    function actionFor(feeIdx, status) {
+      if (status === 'paid') return `<button class="btn btn-sm" style="background:var(--red-light);color:var(--red);border:none;cursor:pointer;font-family:Outfit,sans-serif" onclick="markFee(${feeIdx},'pending')">Undo</button>`;
+      return `<button class="btn btn-sm" style="background:var(--blue);color:white;border:none;cursor:pointer;font-family:Outfit,sans-serif" onclick="markFee(${feeIdx},'paid')">Mark Paid</button>`;
+    }
+
+    function renderFees(list, indices) {
+      const el = document.getElementById('feeList');
+      if (list.length === 0) { el.innerHTML = '<div class="empty">No records found.</div>'; return; }
+      el.innerHTML = list.map((f, i) => {
+        const s = TD.students.find(x => x.id === f.studentId);
+        const idx = indices[i];
+        return `
+          <div class="fee-card">
+            <div class="left">
+              <div class="avatar">${s.initials}</div>
+              <div class="fee-info">
+                <div class="name">${s.name}</div>
+                <div class="meta">${f.month} · ${s.class}</div>
+              </div>
+            </div>
+            <div class="right">
+              <div class="amount">₹${f.amount.toLocaleString('en-IN')}</div>
+              <div style="margin-top:4px">${badgeFor(f.status)}</div>
+              <div style="margin-top:6px">${actionFor(idx, f.status)}</div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    let currentFilter = 'all';
+
+    function filter(type, el) {
+      currentFilter = type;
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      el.classList.add('active');
+      applyFilter();
+    }
+
+    function applyFilter() {
+      let filtered = feeData.map((f,i) => ({...f, _idx: i}));
+      if (currentFilter !== 'all') filtered = filtered.filter(f => f.status === currentFilter);
+      renderFees(filtered, filtered.map(f => f._idx));
+    }
+
+    function markFee(idx, newStatus) {
+      feeData[idx].status = newStatus;
+      const toast = document.getElementById('toast');
+      toast.textContent = newStatus === 'paid' ? '✅ Marked as paid!' : '↩️ Marked as pending';
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2000);
+      applyFilter();
+    }
+
+    applyFilter();
+  </script>
+</body>
+</html>

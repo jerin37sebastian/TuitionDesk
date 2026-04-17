@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TuitionDesk — Students</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="topbar-title">Students</div>
+    <button class="fab" onclick="openModal()">+</button>
+  </div>
+
+  <!-- PAGE -->
+  <div class="page">
+    <div class="search-bar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="searchInput" placeholder="Search students..." oninput="filterStudents()"/>
+    </div>
+    <div id="studentList"></div>
+  </div>
+
+  <!-- ADD STUDENT MODAL -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <div class="modal-title">Add New Student</div>
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" id="newName" placeholder="e.g. Rahul Nair"/>
+      </div>
+      <div class="form-group">
+        <label>Class</label>
+        <select id="newClass">
+          <option>Class 8</option>
+          <option>Class 9</option>
+          <option>Class 10</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Batch</label>
+        <select id="newBatch">
+          <option>Batch A</option>
+          <option>Batch B</option>
+          <option>Batch C</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Parent Phone</label>
+        <input type="tel" id="newPhone" placeholder="9876543210"/>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-outline" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" style="flex:1" onclick="addStudent()">Add Student</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav">
+    <a href="dashboard.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Home
+    </a>
+    <a href="students.html" class="nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/></svg>
+      Students
+    </a>
+    <a href="attendance.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      Attendance
+    </a>
+    <a href="fees.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      Fees
+    </a>
+  </nav>
+
+  <script src="js/data.js"></script>
+  <script>
+    let students = [...TD.students];
+
+    function renderStudents(list) {
+      const el = document.getElementById('studentList');
+      if (list.length === 0) {
+        el.innerHTML = '<div class="empty">No students found.</div>';
+        return;
+      }
+      el.innerHTML = list.map(s => `
+        <div class="student-card">
+          <div class="avatar">${s.initials}</div>
+          <div class="student-info" style="flex:1">
+            <div class="name">${s.name}</div>
+            <div class="meta">${s.class} · ${s.batch}</div>
+          </div>
+          <span class="badge badge-blue">${s.batch}</span>
+        </div>`).join('');
+    }
+
+    function filterStudents() {
+      const q = document.getElementById('searchInput').value.toLowerCase();
+      renderStudents(students.filter(s => s.name.toLowerCase().includes(q)));
+    }
+
+    function openModal()  { document.getElementById('modalOverlay').classList.add('open'); }
+    function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
+
+    function addStudent() {
+      const name  = document.getElementById('newName').value.trim();
+      if (!name) return alert('Please enter a name.');
+      const cls   = document.getElementById('newClass').value;
+      const batch = document.getElementById('newBatch').value;
+      const phone = document.getElementById('newPhone').value.trim();
+      const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
+      students.push({ id: students.length + 1, name, class: cls, batch, phone, initials });
+      renderStudents(students);
+      closeModal();
+      document.getElementById('newName').value = '';
+      document.getElementById('newPhone').value = '';
+    }
+
+    document.getElementById('modalOverlay').addEventListener('click', e => {
+      if (e.target === e.currentTarget) closeModal();
+    });
+
+    renderStudents(students);
+  </script>
+</body>
+</html>

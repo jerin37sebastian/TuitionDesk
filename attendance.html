@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TuitionDesk — Attendance</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/style.css"/>
+  <style>
+    .save-bar { position: fixed; bottom: var(--nav-h); left: 0; right: 0; background: var(--white); border-top: 1px solid var(--border); padding: 12px 16px; z-index: 99; }
+    .summary { font-size: 13px; color: var(--muted); text-align: center; margin-top: 8px; }
+    .toast { position: fixed; bottom: calc(var(--nav-h) + 80px); left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 500; opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; }
+    .toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="topbar-title">Attendance</div>
+  </div>
+
+  <!-- PAGE -->
+  <div class="page" style="padding-bottom: 100px">
+
+    <div class="date-bar">
+      <span class="date-text" id="dateLabel">Today</span>
+      <input type="date" id="datePicker" onchange="updateDate()"/>
+    </div>
+
+    <div id="attList"></div>
+
+  </div>
+
+  <!-- SAVE BAR -->
+  <div class="save-bar">
+    <button class="btn btn-primary" onclick="saveAttendance()">Save Attendance</button>
+    <div class="summary" id="summary"></div>
+  </div>
+
+  <div class="toast" id="toast">✅ Attendance saved!</div>
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav">
+    <a href="dashboard.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Home
+    </a>
+    <a href="students.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/></svg>
+      Students
+    </a>
+    <a href="attendance.html" class="nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      Attendance
+    </a>
+    <a href="fees.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      Fees
+    </a>
+  </nav>
+
+  <script src="js/data.js"></script>
+  <script>
+    let attState = {};
+
+    // Set today's date
+    const today = new Date();
+    const pad = n => String(n).padStart(2,'0');
+    document.getElementById('datePicker').value = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
+
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const days   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+    function updateDate() {
+      const val = document.getElementById('datePicker').value;
+      const d = new Date(val + 'T00:00:00');
+      document.getElementById('dateLabel').textContent = `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]}`;
+    }
+    updateDate();
+
+    function mark(id, status) {
+      attState[id] = status;
+      document.querySelector(`#row-${id} .att-btn.present`).classList.toggle('active', status === 'present');
+      document.querySelector(`#row-${id} .att-btn.absent`).classList.toggle('active',  status === 'absent');
+      updateSummary();
+    }
+
+    function updateSummary() {
+      const vals = Object.values(attState);
+      const p = vals.filter(v => v === 'present').length;
+      const a = vals.filter(v => v === 'absent').length;
+      document.getElementById('summary').textContent = `${p} Present · ${a} Absent · ${TD.students.length - vals.length} Unmarked`;
+    }
+
+    function saveAttendance() {
+      const toast = document.getElementById('toast');
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+
+    // Render
+    const list = document.getElementById('attList');
+    TD.students.forEach(s => {
+      const defaultStatus = TD.attendance.find(a => a.studentId === s.id)?.status || '';
+      attState[s.id] = defaultStatus;
+      list.innerHTML += `
+        <div class="att-row" id="row-${s.id}">
+          <div class="left">
+            <div class="avatar">${s.initials}</div>
+            <div>
+              <div style="font-size:15px;font-weight:600">${s.name}</div>
+              <div style="font-size:12px;color:var(--muted)">${s.class}</div>
+            </div>
+          </div>
+          <div class="att-btns">
+            <button class="att-btn present ${defaultStatus === 'present' ? 'active' : ''}" onclick="mark(${s.id},'present')">P</button>
+            <button class="att-btn absent  ${defaultStatus === 'absent'  ? 'active' : ''}" onclick="mark(${s.id},'absent')">A</button>
+          </div>
+        </div>`;
+    });
+    updateSummary();
+  </script>
+</body>
+</html>

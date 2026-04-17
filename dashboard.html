@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TuitionDesk — Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="topbar-logo">
+      <div class="icon">📚</div>
+      <span>TuitionDesk</span>
+    </div>
+    <div style="font-size:22px; cursor:pointer">👤</div>
+  </div>
+
+  <!-- PAGE -->
+  <div class="page">
+
+    <div class="greeting">
+      <div class="hello" id="greeting">Good morning, Suresh Sir 👋</div>
+      <div class="sub" id="dateStr">Today, loading...</div>
+    </div>
+
+    <!-- STAT GRID -->
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-icon">👥</div>
+        <div class="stat-label">Total Students</div>
+        <div class="stat-value" id="totalStudents">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">✅</div>
+        <div class="stat-label">Present Today</div>
+        <div class="stat-value" id="presentToday">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">💰</div>
+        <div class="stat-label">Fees Paid</div>
+        <div class="stat-value" id="feesPaid">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">⚠️</div>
+        <div class="stat-label">Fee Pending</div>
+        <div class="stat-value" id="feesPending">0</div>
+      </div>
+    </div>
+
+    <!-- RECENT ATTENDANCE -->
+    <div class="section-title">Today's Attendance</div>
+    <div id="attList"></div>
+
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav">
+    <a href="dashboard.html" class="nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Home
+    </a>
+    <a href="students.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/></svg>
+      Students
+    </a>
+    <a href="attendance.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      Attendance
+    </a>
+    <a href="fees.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      Fees
+    </a>
+  </nav>
+
+  <script src="js/data.js"></script>
+  <script>
+    // Greeting
+    const h = new Date().getHours();
+    const greet = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+    document.getElementById('greeting').textContent = `${greet}, ${TD.admin.name} 👋`;
+
+    const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const now = new Date();
+    document.getElementById('dateStr').textContent = `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+
+    // Stats
+    document.getElementById('totalStudents').textContent = TD.students.length;
+    document.getElementById('presentToday').textContent  = TD.attendance.filter(a => a.status === 'present').length;
+    document.getElementById('feesPaid').textContent      = TD.fees.filter(f => f.status === 'paid').length;
+    document.getElementById('feesPending').textContent   = TD.fees.filter(f => f.status === 'pending').length;
+
+    // Attendance list
+    const list = document.getElementById('attList');
+    TD.attendance.slice(0, 5).forEach(a => {
+      const s = TD.students.find(x => x.id === a.studentId);
+      const isPresent = a.status === 'present';
+      list.innerHTML += `
+        <div class="student-card">
+          <div class="avatar">${s.initials}</div>
+          <div class="student-info" style="flex:1">
+            <div class="name">${s.name}</div>
+            <div class="meta">${s.class} · ${s.batch}</div>
+          </div>
+          <span class="badge ${isPresent ? 'badge-green' : 'badge-red'}">
+            ${isPresent ? '✅ Present' : '❌ Absent'}
+          </span>
+        </div>`;
+    });
+  </script>
+</body>
+</html>
