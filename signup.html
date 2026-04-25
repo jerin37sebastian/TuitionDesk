@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>TuitionDesk — Sign Up</title>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="css/style.css"/>
+  <link rel="stylesheet" href="style.css"/>
   <style>
     body { display:flex; align-items:center; justify-content:center; padding:24px 20px; min-height:100vh; padding-bottom:24px; }
     .wrap { width:100%; max-width:400px; }
@@ -86,7 +86,7 @@
   </div>
 
   <script type="module">
-    import { auth, db } from './js/firebase.js';
+    import { auth, db } from 'firebase.js';
     import { createUserWithEmailAndPassword, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.1/firebase-auth.js";
     import { doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore.js";
 
