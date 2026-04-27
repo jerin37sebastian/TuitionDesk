@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TuitionDesk — Students</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="topbar-title">Students</div>
+    <button class="fab" id="addBtn">+</button>
+  </div>
+
+  <div class="page">
+    <div class="search-bar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="searchInput" placeholder="Search students..."/>
+    </div>
+    <div id="studentList"><div style="color:var(--muted);font-size:14px;text-align:center;padding:30px">Loading...</div></div>
+  </div>
+
+  <!-- ADD STUDENT MODAL -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <div class="modal-title">Add New Student</div>
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" id="newName" placeholder="e.g. Rahul Nair"/>
+      </div>
+      <div class="form-group">
+        <label>Class</label>
+        <input type="text" id="newClass" placeholder="e.g. Class 10"/>
+      </div>
+      <div class="form-group">
+        <label>Batch</label>
+        <input type="text" id="newBatch" placeholder="e.g. Batch A"/>
+      </div>
+      <div class="form-group">
+        <label>Parent Phone</label>
+        <input type="tel" id="newPhone" placeholder="9876543210"/>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-outline" id="cancelBtn">Cancel</button>
+        <button class="btn btn-primary" style="flex:1" id="saveBtn">Add Student</button>
+      </div>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="dashboard.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Home
+    </a>
+    <a href="students.html" class="nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/></svg>
+      Students
+    </a>
+    <a href="attendance.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      Attendance
+    </a>
+    <a href="fees.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      Fees
+    </a>
+  </nav>
+
+  <script type="module">
+    import { auth, db } from './js/firebase.js';
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.1/firebase-auth.js";
+    import { collection, query, where, getDocs, addDoc, deleteDoc, doc, serverTimestamp, getDoc } from "https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore.js";
+
+    let uid = null;
+    let students = [];
+    const FREE_LIMIT = 15;
+
+    const overlay  = document.getElementById('modalOverlay');
+    const addBtn   = document.getElementById('addBtn');
+    const cancelBtn= document.getElementById('cancelBtn');
+    const saveBtn  = document.getElementById('saveBtn');
+    const searchEl = document.getElementById('searchInput');
+
+    addBtn.onclick    = () => overlay.classList.add('open');
+    cancelBtn.onclick = () => overlay.classList.remove('open');
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('open'); });
+
+    searchEl.oninput = () => {
+      const q = searchEl.value.toLowerCase();
+      render(students.filter(s => s.name.toLowerCase().includes(q)));
+    };
+
+    function initials(name) {
+      return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
+    }
+
+    function render(list) {
+      const el = document.getElementById('studentList');
+      if (list.length === 0) {
+        el.innerHTML = '<div class="empty">No students found. Tap + to add one.</div>';
+        return;
+      }
+      el.innerHTML = list.map(s => `
+        <div class="student-card">
+          <div class="avatar">${initials(s.name)}</div>
+          <div class="student-info" style="flex:1">
+            <div class="name">${s.name}</div>
+            <div class="meta">${s.class || '—'} · ${s.batch || '—'}</div>
+          </div>
+          <button onclick="deleteStudent('${s.id}')" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted)">🗑️</button>
+        </div>`).join('');
+    }
+
+    window.deleteStudent = async function(id) {
+      if (!confirm('Remove this student?')) return;
+      await deleteDoc(doc(db, 'students', id));
+      students = students.filter(s => s.id !== id);
+      render(students);
+    };
+
+    saveBtn.onclick = async () => {
+      const name  = document.getElementById('newName').value.trim();
+      const cls   = document.getElementById('newClass').value.trim();
+      const batch = document.getElementById('newBatch').value.trim();
+      const phone = document.getElementById('newPhone').value.trim();
+      if (!name) { alert('Please enter a name.'); return; }
+
+      // Free plan limit check
+      const centerSnap = await getDoc(doc(db, 'centers', uid));
+      const plan = centerSnap.exists() ? centerSnap.data().plan : 'free';
+      if (plan === 'free' && students.length >= FREE_LIMIT) {
+        alert(`Free plan is limited to ${FREE_LIMIT} students. Upgrade to Pro for unlimited students.`);
+        return;
+      }
+
+      saveBtn.textContent = 'Saving...';
+      saveBtn.disabled = true;
+      await addDoc(collection(db, 'students'), { name, class: cls, batch, phone, centerId: uid, createdAt: serverTimestamp() });
+      const snap = await getDocs(query(collection(db, 'students'), where('centerId', '==', uid)));
+      students = [];
+      snap.forEach(d => students.push({ id: d.id, ...d.data() }));
+      render(students);
+      overlay.classList.remove('open');
+      document.getElementById('newName').value  = '';
+      document.getElementById('newClass').value = '';
+      document.getElementById('newBatch').value = '';
+      document.getElementById('newPhone').value = '';
+      saveBtn.textContent = 'Add Student';
+      saveBtn.disabled = false;
+    };
+
+    onAuthStateChanged(auth, async user => {
+      if (!user) { window.location.href = 'login.html'; return; }
+      uid = user.uid;
+      const snap = await getDocs(query(collection(db, 'students'), where('centerId', '==', uid)));
+      students = [];
+      snap.forEach(d => students.push({ id: d.id, ...d.data() }));
+      render(students);
+    });
+  </script>
+</body>
+</html>

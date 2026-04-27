@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TuitionDesk — Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/style.css"/>
+  <style>
+    .skeleton { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: shimmer 1.2s infinite; border-radius: 8px; }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    .sk-text { height: 16px; margin-bottom: 8px; }
+    .sk-val  { height: 32px; width: 60%; }
+  </style>
+</head>
+<body>
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="topbar-logo">
+      <div class="icon">📚</div>
+      <span>TuitionDesk</span>
+    </div>
+    <div style="font-size:22px;cursor:pointer" onclick="window.location.href='settings.html'">👤</div>
+  </div>
+
+  <!-- PAGE -->
+  <div class="page">
+
+    <div class="greeting">
+      <div class="hello" id="greeting">Loading...</div>
+      <div class="sub" id="dateStr"></div>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-label">Students</div><div class="stat-value" id="totalStudents">—</div></div>
+      <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-label">Present Today</div><div class="stat-value" id="presentToday">—</div></div>
+      <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-label">Fees Paid</div><div class="stat-value" id="feesPaid">—</div></div>
+      <div class="stat-card"><div class="stat-icon">⚠️</div><div class="stat-label">Pending</div><div class="stat-value" id="feesPending">—</div></div>
+    </div>
+
+    <div class="section-title">Today's Attendance</div>
+    <div id="attList"><div style="color:var(--muted);font-size:14px;text-align:center;padding:20px">Loading...</div></div>
+
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav">
+    <a href="dashboard.html" class="nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Home
+    </a>
+    <a href="students.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/></svg>
+      Students
+    </a>
+    <a href="attendance.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      Attendance
+    </a>
+    <a href="fees.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      Fees
+    </a>
+  </nav>
+
+  <script type="module">
+    import { auth, db } from './js/firebase.js';
+    import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.1/firebase-auth.js";
+    import { doc, getDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore.js";
+
+    // Date
+    const now = new Date();
+    const days   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    document.getElementById('dateStr').textContent = `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+
+    onAuthStateChanged(auth, async user => {
+      if (!user) { window.location.href = 'login.html'; return; }
+
+      // Greeting
+      const h = now.getHours();
+      const greet = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+      const centerSnap = await getDoc(doc(db, 'centers', user.uid));
+      const center = centerSnap.exists() ? centerSnap.data() : {};
+      document.getElementById('greeting').textContent = `${greet}, ${center.ownerName || user.displayName || 'Teacher'} 👋`;
+
+      const uid = user.uid;
+
+      // Students
+      const studentsQ = query(collection(db, 'students'), where('centerId', '==', uid));
+      const studentsSnap = await getDocs(studentsQ);
+      const students = [];
+      studentsSnap.forEach(d => students.push({ id: d.id, ...d.data() }));
+      document.getElementById('totalStudents').textContent = students.length;
+
+      // Today's attendance
+      const attQ = query(collection(db, 'attendance'), where('centerId', '==', uid), where('date', '==', todayStr));
+      const attSnap = await getDocs(attQ);
+      const attMap = {};
+      attSnap.forEach(d => { const a = d.data(); attMap[a.studentId] = a.status; });
+
+      const present = Object.values(attMap).filter(s => s === 'present').length;
+      document.getElementById('presentToday').textContent = present;
+
+      // Fees this month
+      const monthStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+      const feesQ = query(collection(db, 'fees'), where('centerId', '==', uid), where('monthKey', '==', monthStr));
+      const feesSnap = await getDocs(feesQ);
+      let paid = 0, pending = 0;
+      feesSnap.forEach(d => {
+        const f = d.data();
+        if (f.status === 'paid') paid++; else pending++;
+      });
+      document.getElementById('feesPaid').textContent    = paid;
+      document.getElementById('feesPending').textContent = pending;
+
+      // Attendance list
+      const list = document.getElementById('attList');
+      if (students.length === 0) {
+        list.innerHTML = '<div class="empty">No students yet. <a href="students.html" style="color:var(--blue)">Add some →</a></div>';
+        return;
+      }
+      list.innerHTML = students.slice(0, 6).map(s => {
+        const status = attMap[s.id];
+        const initials = s.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+        const badge = status === 'present'
+          ? '<span class="badge badge-green">✅ Present</span>'
+          : status === 'absent'
+          ? '<span class="badge badge-red">❌ Absent</span>'
+          : '<span class="badge" style="background:#f1f5f9;color:var(--muted)">— Not marked</span>';
+        return `
+          <div class="student-card">
+            <div class="avatar">${initials}</div>
+            <div class="student-info" style="flex:1">
+              <div class="name">${s.name}</div>
+              <div class="meta">${s.class || ''} · ${s.batch || ''}</div>
+            </div>
+            ${badge}
+          </div>`;
+      }).join('');
+    });
+  </script>
+</body>
+</html>
